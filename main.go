@@ -1,3 +1,5 @@
+// +build windows
+
 package main
 
 import (
@@ -6,8 +8,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"time"
+	"strings"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
@@ -16,29 +19,44 @@ import (
 
 type myservice struct{}
 
+var ilog *log.Logger // info logger
+var dlog *log.Logger // debug logger
+var fullCmd string   // full command
+
 func main() {
 	// flag
 	var svcName string
 	flag.StringVar(&svcName, "name", "GO_SERVIFY", "name of the service")
+
 	var desc string
-	flag.StringVar(&svcName, "desc", "GO_SERVIFY Description", "description of the service")
+	flag.StringVar(&desc, "desc", "GO_SERVIFY Description", "description of the service")
+
 	var cmd string
 	flag.StringVar(&cmd, "cmd", "list", "Command (install, remove, list")
 
+	var startType string
+	flag.StringVar(&startType, "start", "auto", "Service Start Type (auto, manual or disabled")
+
+	flag.StringVar(&fullCmd, "wrap", "", "Full command to be wrapped as a service")
+
 	flag.Parse()
-	//
+	// /flag
 	var err error
 	// isIntSess, err := svc.IsAnInteractiveSession()
 	// if err != nil {
 	// 	log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	// }
+	ilog = log.New(os.Stderr, "[INFO] ", 0)
 
 	switch cmd {
 	// case "debug":
 	// 	runService(svcName, true)
 	// 	return
 	case "install":
-		err = installService(svcName, desc)
+		if fullCmd == "" {
+			ilog.Fatal("Install without 'wrap' won't work!")
+		}
+		err = installService(svcName, desc, startType, fullCmd)
 	case "remove":
 		err = removeService(svcName)
 	case "list":
@@ -52,7 +70,7 @@ func main() {
 	// case "continue":
 	// 	err = controlService(svcName, svc.Continue, svc.Running)
 	default:
-		fmt.Printf("invalid command %s", cmd)
+		ilog.Printf("invalid command %s", cmd)
 	}
 	if err != nil {
 		log.Fatalf("failed to %s %s: %v", cmd, svcName, err)
@@ -61,32 +79,38 @@ func main() {
 }
 
 func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
-	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown | svc.AcceptPauseAndContinue
+	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
+
 	changes <- svc.Status{State: svc.StartPending}
-	fasttick := time.Tick(500 * time.Millisecond)
-	slowtick := time.Tick(2 * time.Second)
-	tick := fasttick
+
+	// Start App
+	exitChan := make(chan bool)
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	go func(cmd *exec.Cmd, exitChan chan bool) {
+		err := cmd.Run()
+		if err != nil {
+			ilog.Printf("Error executing command:%v %v\nError:%s", cmd.Path, cmd.Args, err)
+		}
+		exitChan <- true
+	}(cmd, exitChan)
+	//
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 loop:
 	for {
 		select {
-		case <-tick:
-			fmt.Println("beep")
+		case <-exitChan: // we done?
+			break loop
 		case c := <-r:
 			switch c.Cmd {
 			case svc.Interrogate:
-				changes <- c.CurrentStatus
-				// Testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
-				time.Sleep(100 * time.Millisecond)
+				// changes <- c.CurrentStatus
+				// // Testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
+				// time.Sleep(100 * time.Millisecond)
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				break loop
-			case svc.Pause:
-				changes <- svc.Status{State: svc.Paused, Accepts: cmdsAccepted}
-				tick = slowtick
-			case svc.Continue:
-				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-				tick = fasttick
 			default:
 				fmt.Printf("unexpected control request #%d", c)
 			}
@@ -96,31 +120,57 @@ loop:
 	return
 }
 
-func installService(name, desc string) error {
+func installService(name, desc, startType, fullCmd string) error {
+	ilog.Printf("Installing service: Name: '%s', Descritpion: '%s'", name, desc)
+
+	ilog.Print("connecting to service manager...")
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
 	}
 	defer m.Disconnect()
-
+	ilog.Print("Getting executable path...")
 	exepath, err := exePath()
 	if err != nil {
 		return err
 	}
+	ilog.Printf("exepath: %s", exepath)
 	// service exists?
+	ilog.Print("Checking if service already exists...")
+	ilog.Printf("Trying to open service: %s", name)
 	s, err := m.OpenService(name)
 	if err == nil {
 		s.Close()
 		return fmt.Errorf("service %s already exists", name)
 	}
+	ilog.Printf("Serive doesn't exist, proceeding with install...")
+	ilog.Printf("Creating Service: %s", name)
 
+	// svcstart type
+	var stype uint32
+	switch startType {
+	case "auto":
+		stype = mgr.StartAutomatic
+	case "manual":
+		stype = mgr.StartManual
+	case "disabled":
+		stype = mgr.StartDisabled
+	default:
+		ilog.Fatalf("Unknown Service Start type: %s; Only auto, manual and disabled are supported", startType)
+	}
 	// create service
-	s, err = m.CreateService(name, exepath, mgr.Config{DisplayName: name, Description: desc})
+	s, err = m.CreateService(name, exepath, mgr.Config{
+		DisplayName: name,
+		Description: desc,
+		StartType:   stype,
+	},
+		strings.Split(fullCmd, " ")...,
+	)
 	if err != nil {
 		return err
 	}
 	s.Close()
-	fmt.Println("service installed:", name)
+	ilog.Println("service installed:", name)
 	return nil
 }
 
@@ -131,13 +181,16 @@ func runService(name string, isDebug bool) {
 	}
 	err := run(name, &myservice{})
 	if err != nil {
-		fmt.Println("%s service failed: %v", name, err)
+		fmt.Printf("%s service failed: %s", name, err)
 		return
 	}
-	fmt.Println("%s service stopped", name)
+	fmt.Printf("%s service stopped", name)
 }
 
 func removeService(name string) error {
+	ilog.Printf("Removing service: '%s'", name)
+
+	ilog.Print("connecting to service manager...")
 	m, err := mgr.Connect()
 	if err != nil {
 		return err
@@ -152,6 +205,8 @@ func removeService(name string) error {
 	if err != nil {
 		return err
 	}
+	ilog.Printf("Service removed.")
+
 	return nil
 }
 
