@@ -10,20 +10,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-type myservice struct{}
+type launcherSVC struct {
+	HostName         string
+	EnrollSecretFile string
+}
 
 var ilog *log.Logger // info logger
-var dlog *log.Logger // debug logger
-var fullCmd string   // full command
 
 func main() {
+	ilog = log.New(os.Stderr, "[INFO] ", 0)
+	var err error
+
 	// flag
 	var svcName string
 	flag.StringVar(&svcName, "name", "GO_SERVIFY", "name of the service")
@@ -37,38 +40,35 @@ func main() {
 	var startType string
 	flag.StringVar(&startType, "start", "auto", "Service Start Type (auto, manual or disabled")
 
-	flag.StringVar(&fullCmd, "wrap", "", "Full command to be wrapped as a service")
+	var hostname string
+	flag.StringVar(&hostname, "hostname", "127.0.0.1:8080", "The hostname of the gRPC server.")
+
+	var secretPath string
+	flag.StringVar(&secretPath, "secret", ".\\enroll", "the path to the enrollment secret file")
 
 	flag.Parse()
 	// /flag
-	var err error
-	// isIntSess, err := svc.IsAnInteractiveSession()
-	// if err != nil {
-	// 	log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
-	// }
-	ilog = log.New(os.Stderr, "[INFO] ", 0)
+
+	// interactive?
+	isIntSess, err := svc.IsAnInteractiveSession()
+	if err != nil {
+		ilog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
+	}
+	if !isIntSess {
+		runService(svcName, false)
+		return
+	}
 
 	switch cmd {
-	// case "debug":
-	// 	runService(svcName, true)
-	// 	return
 	case "install":
-		if fullCmd == "" {
-			ilog.Fatal("Install without 'wrap' won't work!")
-		}
-		err = installService(svcName, desc, startType, fullCmd)
+		err = installService(svcName, desc, startType, hostname, secretPath)
 	case "remove":
 		err = removeService(svcName)
+	case "run":
+		runService(svcName, true)
+		return
 	case "list":
 		err = printServices()
-	// case "start":
-	// 	err = startService(svcName)
-	// case "stop":
-	// 	err = controlService(svcName, svc.Stop, svc.Stopped)
-	// case "pause":
-	// 	err = controlService(svcName, svc.Pause, svc.Paused)
-	// case "continue":
-	// 	err = controlService(svcName, svc.Continue, svc.Running)
 	default:
 		ilog.Printf("invalid command %s", cmd)
 	}
@@ -78,7 +78,7 @@ func main() {
 	return
 }
 
-func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+func (m *launcherSVC) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 
 	changes <- svc.Status{State: svc.StartPending}
@@ -120,7 +120,7 @@ loop:
 	return
 }
 
-func installService(name, desc, startType, fullCmd string) error {
+func installService(name, desc, startType, hostname, secretPath string) error {
 	ilog.Printf("Installing service: Name: '%s', Descritpion: '%s'", name, desc)
 
 	ilog.Print("connecting to service manager...")
@@ -164,7 +164,12 @@ func installService(name, desc, startType, fullCmd string) error {
 		Description: desc,
 		StartType:   stype,
 	},
-		strings.Split(fullCmd, " ")...,
+		"-cmd",
+		"run",
+		"-hostname",
+		hostname,
+		"-secret",
+		secretPath,
 	)
 	if err != nil {
 		return err
@@ -179,12 +184,12 @@ func runService(name string, isDebug bool) {
 	if isDebug {
 		run = debug.Run
 	}
-	err := run(name, &myservice{})
+	err := run(name, &launcherSVC{})
 	if err != nil {
-		fmt.Printf("%s service failed: %s", name, err)
+		ilog.Printf("%s service failed: %s", name, err)
 		return
 	}
-	fmt.Printf("%s service stopped", name)
+	ilog.Printf("%s service stopped", name)
 }
 
 func removeService(name string) error {
