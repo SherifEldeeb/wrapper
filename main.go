@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
@@ -20,8 +21,10 @@ type launcherSVC struct {
 }
 
 var ilog *log.Logger // info logger
+var isDebug = true
 
 func main() {
+
 	ilog = log.New(os.Stderr, "[INFO] ", 0)
 	var err error
 
@@ -51,12 +54,17 @@ func main() {
 	// flag.Parse()
 	// /flag
 
+	// change dir to where the exe is
+	exename, _ := os.Executable()
+	os.Chdir(filepath.Dir(exename))
+	//
 	// interactive?
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
 		ilog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	}
 	if !isIntSess {
+		isDebug = false
 		runService(svcName, false)
 		return
 	}
@@ -88,8 +96,10 @@ func (m *launcherSVC) Execute(args []string, r <-chan svc.ChangeRequest, changes
 	// Start App
 	exitChan := make(chan bool)
 	cmd := exec.Command("launcher.exe", fmt.Sprintf("--hostname=%s", os.Args[2]), fmt.Sprintf("--enroll_secret_path=%s", os.Args[3]), "--insecure")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if isDebug {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	go func(cmd *exec.Cmd, exitChan chan bool) {
 		err := cmd.Run()
 		if err != nil {
@@ -112,6 +122,12 @@ loop:
 				// time.Sleep(100 * time.Millisecond)
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
+				kill := exec.Command("TASKKILL.exe", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid))
+				if isDebug {
+					kill.Stderr = os.Stderr
+					kill.Stdout = os.Stdout
+				}
+				kill.Run()
 				break loop
 			default:
 				fmt.Printf("unexpected control request #%d", c)
