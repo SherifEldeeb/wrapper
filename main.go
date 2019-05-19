@@ -3,8 +3,6 @@
 package main
 
 import (
-	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -27,26 +25,30 @@ func main() {
 	ilog = log.New(os.Stderr, "[INFO] ", 0)
 	var err error
 
+	if len(os.Args) != 4 {
+		ilog.Fatal("Number of args has to be 3 (cmd host enroll_secret_path)")
+	}
+
 	// flag
-	var svcName string
-	flag.StringVar(&svcName, "name", "GO_SERVIFY", "name of the service")
+	var svcName = "EBRIGADE_Kolide_Wrapper"
+	// flag.StringVar(&svcName, "name", "GO_SERVIFY", "name of the service")
 
-	var desc string
-	flag.StringVar(&desc, "desc", "GO_SERVIFY Description", "description of the service")
+	var desc = "EBRIGADE windows service wrapper for Kolide Launcher"
+	// flag.StringVar(&desc, "desc", "GO_SERVIFY Description", "description of the service")
 
-	var cmd string
-	flag.StringVar(&cmd, "cmd", "list", "Command (install, remove, list")
+	var cmd = os.Args[1]
+	// flag.StringVar(&cmd, "cmd", "list", "Command (install, remove, list")
 
-	var startType string
-	flag.StringVar(&startType, "start", "auto", "Service Start Type (auto, manual or disabled")
+	var startType = "auto"
+	// flag.StringVar(&startType, "start", "auto", "Service Start Type (auto, manual or disabled")
 
-	var hostname string
-	flag.StringVar(&hostname, "hostname", "127.0.0.1:8080", "The hostname of the gRPC server.")
+	var hostname = os.Args[2]
+	// flag.StringVar(&hostname, "hostname", "127.0.0.1:8080", "The hostname of the gRPC server.")
 
-	var secretPath string
-	flag.StringVar(&secretPath, "secret", ".\\enroll", "the path to the enrollment secret file")
+	var secretPath = os.Args[3]
+	// flag.StringVar(&secretPath, "secret", ".\\enroll", "the path to the enrollment secret file")
 
-	flag.Parse()
+	// flag.Parse()
 	// /flag
 
 	// interactive?
@@ -67,8 +69,6 @@ func main() {
 	case "run":
 		runService(svcName, true)
 		return
-	case "list":
-		err = printServices()
 	default:
 		ilog.Printf("invalid command %s", cmd)
 	}
@@ -79,13 +79,15 @@ func main() {
 }
 
 func (m *launcherSVC) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
+	ilog.Printf("SVC Execute Args: %#v", os.Args)
+
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 
 	changes <- svc.Status{State: svc.StartPending}
 
 	// Start App
 	exitChan := make(chan bool)
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command("launcher.exe", fmt.Sprintf("--hostname=%s", os.Args[2]), fmt.Sprintf("--enroll_secret_path=%s", os.Args[3]), "--insecure")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	go func(cmd *exec.Cmd, exitChan chan bool) {
@@ -164,11 +166,8 @@ func installService(name, desc, startType, hostname, secretPath string) error {
 		Description: desc,
 		StartType:   stype,
 	},
-		"-cmd",
 		"run",
-		"-hostname",
 		hostname,
-		"-secret",
 		secretPath,
 	)
 	if err != nil {
@@ -212,25 +211,6 @@ func removeService(name string) error {
 	}
 	ilog.Printf("Service removed.")
 
-	return nil
-}
-
-func listServices() ([]string, error) {
-	m, err := mgr.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer m.Disconnect()
-	return m.ListServices()
-}
-
-func printServices() error {
-	svcs, err := listServices()
-	if err != nil {
-		return err
-	}
-	j, _ := json.MarshalIndent(svcs, "", "    ")
-	fmt.Println(string(j))
 	return nil
 }
 
