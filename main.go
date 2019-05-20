@@ -1,3 +1,4 @@
+//go:generate goversioninfo
 // +build windows
 
 package main
@@ -9,16 +10,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-type launcherSVC struct {
-	HostName         string
-	EnrollSecretFile string
-}
+type launcherSVC struct{}
 
 var ilog *log.Logger // info logger
 var isDebug = true
@@ -158,10 +157,17 @@ func installService(name, desc, startType, hostname, secretPath string) error {
 	ilog.Printf("Trying to open service: %s", name)
 	s, err := m.OpenService(name)
 	if err == nil {
+		ilog.Printf("service %s already exists, removing it...", name)
+		s.Control(svc.Stop)
+		time.Sleep(2 * time.Second)
+		err = s.Delete()
+		if err != nil {
+			return fmt.Errorf("Error removing service: %s", err)
+		}
 		s.Close()
-		return fmt.Errorf("service %s already exists", name)
+	} else {
+		ilog.Printf("Serive doesn't exist, proceeding with install...")
 	}
-	ilog.Printf("Serive doesn't exist, proceeding with install...")
 	ilog.Printf("Creating Service: %s", name)
 
 	// svcstart type
@@ -189,6 +195,7 @@ func installService(name, desc, startType, hostname, secretPath string) error {
 	if err != nil {
 		return err
 	}
+	s.Start()
 	s.Close()
 	ilog.Println("service installed:", name)
 	return nil
