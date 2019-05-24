@@ -26,17 +26,26 @@ func main() {
 
 	ilog = log.New(os.Stderr, "[INFO] ", 0)
 	var err error
-
-	if len(os.Args) != 4 {
-		ilog.Fatal("Number of args has to be 3 (cmd host enroll_secret_path)")
-	}
-
 	// flag
 	var svcName = "EBRIGADE_Kolide_Wrapper"
 	// flag.StringVar(&svcName, "name", "GO_SERVIFY", "name of the service")
 
 	var desc = "EBRIGADE windows service wrapper for Kolide Launcher"
 	// flag.StringVar(&desc, "desc", "GO_SERVIFY Description", "description of the service")
+
+	// Remove?
+	if len(os.Args) == 2 && os.Args[1] == "remove" {
+		err = removeService(svcName)
+		if err != nil {
+			ilog.Fatalf("Error removing service: %s", err)
+		}
+		return
+	}
+
+	// Not correct number of args?
+	if len(os.Args) != 4 {
+		ilog.Fatal("Number of args has to be 3 (cmd host enroll_secret_path)")
+	}
 
 	var cmd = os.Args[1]
 	// flag.StringVar(&cmd, "cmd", "list", "Command (install, remove, list")
@@ -228,6 +237,8 @@ func removeService(name string) error {
 		return fmt.Errorf("service %s is not installed", name)
 	}
 	defer s.Close()
+	s.Control(svc.Stop)
+	time.Sleep(2 * time.Second)
 	err = s.Delete()
 	if err != nil {
 		return err
