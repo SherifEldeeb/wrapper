@@ -31,7 +31,7 @@ func main() {
 			err = service.Install(svcName, "SvcWrapper", "auto", os.Args[3:]...)
 		}
 	case "remove":
-		if len(os.Args) != 3 { // exe + svcname + cmd
+		if len(os.Args) > 2 { // exe + svcname + cmd
 			err = service.Remove(svcName)
 		}
 	case "run":

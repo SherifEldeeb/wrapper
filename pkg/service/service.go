@@ -39,7 +39,7 @@ func Run(name string, args ...string) {
 
 	var w = NewWrapper(args[0], args[1:])
 
-	err = run(name, &w)
+	err = run(name, w)
 	if err != nil {
 		fmt.Printf("%s service failed: %s", name, err)
 		return
@@ -112,12 +112,13 @@ func Install(name, desc, startType string, args ...string) error {
 		os.Exit(1)
 	}
 	// create service
+	fullArgs := append([]string{name, "run"}, args...)
 	s, err = m.CreateService(name, exepath, mgr.Config{
 		DisplayName: name,
 		Description: desc,
 		StartType:   stype,
 	},
-		args...,
+		fullArgs...,
 	// "run",
 	// hostname,
 	// secretPath,

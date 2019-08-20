@@ -9,8 +9,8 @@ import (
 )
 
 // NewWrapper returns a Wrapper
-func NewWrapper(exeName string, args []string) Wrapper {
-	return Wrapper{exeName, args}
+func NewWrapper(exeName string, args []string) *Wrapper {
+	return &Wrapper{exeName, args}
 }
 
 // Wrapper implements the svc.Handler interface,
@@ -46,10 +46,6 @@ func (w *Wrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes cha
 	exitChan := make(chan bool)
 	cmd := exec.Command(w.exeName, w.args...)
 	// cmd := exec.Command("launcher.exe", fmt.Sprintf("--hostname=%s", os.Args[2]), fmt.Sprintf("--enroll_secret_path=%s", os.Args[3]), "--insecure")
-	// if isDebug {
-	// 	cmd.Stdout = os.Stdout
-	// 	cmd.Stderr = os.Stderr
-	// }
 	go func(cmd *exec.Cmd, exitChan chan bool) {
 		err := cmd.Run()
 		if err != nil { // TODO
