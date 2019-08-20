@@ -33,7 +33,7 @@ func Run(name string, args ...string) {
 	if err != nil {
 		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	}
-	if !isIntSess {
+	if isIntSess {
 		run = debug.Run
 	}
 

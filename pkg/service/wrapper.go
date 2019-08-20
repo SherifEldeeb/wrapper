@@ -37,7 +37,7 @@ func (w Wrapper) GetCommand() []string {
 // with 0 being "no error". You can also indicate if exit code,
 // if any, is service specific or not by using svcSpecificEC
 // parameter.
-func (w *Wrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
+func (w *Wrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 
 	changes <- svc.Status{State: svc.StartPending}

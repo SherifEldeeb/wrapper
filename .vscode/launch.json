@@ -12,7 +12,16 @@
             "mode": "auto",
             "program": "${fileDirname}",
             "env": {},
-            "args": ["kolide_launcher_svc", "install", "--host=192.168.0.66:8080", "--enroll_secret_path", "D:\\Code\\LogScout\\EBRIGADE_SCOUT\\osquery\\enroll"]
+            "args": ["kolide_launcher_svc", "install", ".\\launcher.exe", "--host=192.168.0.66:8080", "--enroll_secret", "uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl", "--insecure"]
+        },
+        {
+            "name": "run",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "env": {},
+            "args": ["kolide_launcher_svc", "run", ".\\launcher.exe", "--host=192.168.0.66:8080", "--enroll_secret", "uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl", "--insecure"]
         },
         {
             "name": "remove",
