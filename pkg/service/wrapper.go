@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 
@@ -47,6 +48,11 @@ func (w *Wrapper) Execute(args []string, r <-chan svc.ChangeRequest, changes cha
 	cmd := exec.Command(w.exeName, w.args...)
 	// cmd := exec.Command("launcher.exe", fmt.Sprintf("--hostname=%s", os.Args[2]), fmt.Sprintf("--enroll_secret_path=%s", os.Args[3]), "--insecure")
 	go func(cmd *exec.Cmd, exitChan chan bool) {
+		isIntSess, _ := svc.IsAnInteractiveSession()
+		if isIntSess {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		err := cmd.Run()
 		if err != nil { // TODO
 			// ilog.Printf("Error executing command:%v %v\nError:%s", cmd.Path, cmd.Args, err)
@@ -69,14 +75,15 @@ loop:
 				changes <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				kill := exec.Command("TASKKILL.exe", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid))
-				// if isDebug {
-				// 	kill.Stderr = os.Stderr
-				// 	kill.Stdout = os.Stdout
-				// }
+				isIntSess, _ := svc.IsAnInteractiveSession()
+				if isIntSess {
+					kill.Stdout = os.Stdout
+					kill.Stderr = os.Stderr
+				}
 				kill.Run()
 				break loop
 			default:
-				fmt.Printf("unexpected control request #%d", c)
+				fmt.Printf("unexpected control request #%d\n", c)
 			}
 		}
 	}

@@ -41,7 +41,7 @@ func Run(name string, args ...string) {
 
 	err = run(name, w)
 	if err != nil {
-		fmt.Printf("%s service failed: %s", name, err)
+		fmt.Printf("%s service failed: %s\n", name, err)
 		return
 	}
 }
@@ -66,7 +66,7 @@ func Remove(name string) error {
 // - startType can be one of: "auto", "manual" or "disabled"
 func Install(name, desc, startType string, args ...string) error {
 	// func Install(name, desc, startType, hostname, secretPath string) error {
-	fmt.Printf("Installing service: Name: '%s', Descritpion: '%s'", name, desc)
+	fmt.Printf("Installing service: Name: '%s', Descritpion: '%s'\n", name, desc)
 
 	fmt.Print("connecting to service manager...")
 	m, err := mgr.Connect()
@@ -79,13 +79,13 @@ func Install(name, desc, startType string, args ...string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("exepath: %s", exepath)
+	fmt.Printf("exepath: %s\n", exepath)
 	// service exists?
 	fmt.Print("Checking if service already exists...")
-	fmt.Printf("Trying to open service: %s", name)
+	fmt.Printf("Trying to open service: %s\n", name)
 	s, err := m.OpenService(name)
 	if err == nil {
-		fmt.Printf("service %s already exists, removing it...", name)
+		fmt.Printf("service %s already exists, removing it...\n", name)
 		s.Control(svc.Stop)
 		time.Sleep(2 * time.Second)
 		err = s.Delete()
@@ -94,9 +94,9 @@ func Install(name, desc, startType string, args ...string) error {
 		}
 		s.Close()
 	} else {
-		fmt.Printf("Serive doesn't exist, proceeding with install...")
+		fmt.Printf("Service doesn't exist, proceeding with install...\n")
 	}
-	fmt.Printf("Creating Service: %s", name)
+	fmt.Printf("Creating Service: %s\n", name)
 
 	// svcstart type
 	var stype uint32
@@ -108,7 +108,7 @@ func Install(name, desc, startType string, args ...string) error {
 	case "disabled":
 		stype = mgr.StartDisabled
 	default:
-		fmt.Printf("Unknown Service Start type: %s; Only auto, manual and disabled are supported", startType)
+		fmt.Printf("Unknown Service Start type: %s; Only auto, manual and disabled are supported\n", startType)
 		os.Exit(1)
 	}
 	// create service
