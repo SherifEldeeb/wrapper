@@ -19,19 +19,19 @@
         "FileSubType": "00"
     },
     "StringFileInfo": {
-        "Comments": "EBRIGADE Kolide Launcher Service Wrapper Exe.",
+        "Comments": "Service Wrapper Exe.",
         "CompanyName": "Sherif Eldeeb",
-        "FileDescription": "EBRIGADE Kolide Launcher Service Wrapper Exe.",
-        "FileVersion": "v1.0.0.0",
-        "InternalName": "wrapper.exe",
+        "FileDescription": "Service Wrapper Exe.",
+        "FileVersion": "v0.0.1.0",
+        "InternalName": "SvcWrapper.exe",
         "LegalCopyright": "Copyright (c) 2019 Sherif Eldeeb",
         "LegalTrademarks": "",
         "OriginalFilename": "wrapper.exe",
         "PrivateBuild": "",
-        "ProductName": "wrapper",
-        "ProductVersion": "v1.0.0.0",
+        "ProductName": "SvcWrapper",
+        "ProductVersion": "v0.0.1.0",
         "SpecialBuild": ""
     },
-    "IconPath": "ebrigade.ico",
+    "IconPath": "icon.ico",
     "ManifestPath": ""
 }
