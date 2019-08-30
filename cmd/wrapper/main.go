@@ -34,7 +34,8 @@ twitter.com/0xdeeb
 
             Example 02:
             - > wrapper.exe kolide_launcher_service remove
-                This will stop and remove 'kolide_launcher_service' service\n`)
+				This will stop and remove 'kolide_launcher_service' service
+`)
 	os.Exit(1)
 }
 
