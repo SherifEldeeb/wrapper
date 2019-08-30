@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
-<?define ProductVersion = "0.0.2.0"?>
+<?define ProductVersion = "0.0.1.0"?>
 <?define ProductUpgradeCode = "d839d8c6-a189-4100-b491-8527ae0dd889"?>
-<?define FLEETSERVER = "192.168.0.66:8080" ?>
 <?define KOLIDESECRET = "uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl" ?>
 <?define CompanyName = "SherifEldeeb" ?>
 <?define ProductName = "KolideLauncher" ?>
@@ -20,7 +19,11 @@
     <Property Id="ARPURLINFOABOUT" Value="https://deeb.io"/>
     <Property Id="ARPNOREPAIR" Value="1"/>
     <Property Id="ARPNOMODIFY" Value="1"/>
-
+    <Property Id="FLEETHOSTNAME" Value="127.0.0.1:8080" Admin="yes">
+    </Property>
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallValidate"/>
+    </InstallExecuteSequence>
     <!--<UIRef Id="WixUI_Mondo"/>
     <UIRef Id="WixUI_ErrorProgressText" />-->
 
@@ -77,10 +80,6 @@
       </Directory>
     </Directory>
 
-    <InstallExecuteSequence>
-      <RemoveExistingProducts After="InstallValidate"/>
-    </InstallExecuteSequence>
-
     <Feature Id="FullSetup" Level="1" ConfigurableDirectory="INSTALLDIR"
              Description="Full Setup Desc" Display="expand" Title="Full Setup Title">
       <Feature Id="FeatureShortcut" Level="1" Description="ShortCut Description" Title="Shortcuts Title">
@@ -114,7 +113,7 @@
       </Component>
       <Component Id="wrapper" Guid="{D1B54603-0021-4077-BC51-9CC53EA8B26B}" Win64="yes" Directory="INSTALLDIR">
         <File Source="wrapper.exe" KeyPath="yes" ReadOnly="yes" Id="WRAPPERFILENAME"></File>
-        <ServiceInstall Id="WrapperSvcInstall" Arguments="$(var.WRAPPERSVCNAME) run launcher.exe --hostname=$(var.FLEETSERVER) --enroll_secret=$(var.KOLIDESECRET) --insecure"
+        <ServiceInstall Id="WrapperSvcInstall" Arguments="$(var.WRAPPERSVCNAME) run launcher.exe --hostname=[FLEETHOSTNAME] --enroll_secret=$(var.KOLIDESECRET) --insecure"
                   Description="$(var.WRAPPERSVCDESC)" DisplayName="$(var.WRAPPERSVCDISPNAME)" Interactive="no" Name="$(var.WRAPPERSVCNAME)" Start="auto"
                    Type="ownProcess" ErrorControl="ignore">
           <wix:ServiceConfig xmlns:wix="http://schemas.microsoft.com/wix/UtilExtension" FirstFailureActionType="none" SecondFailureActionType="none" ThirdFailureActionType="none"/>

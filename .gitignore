@@ -12,3 +12,6 @@
 *.out
 enroll
 osquery.conf
+build/package/MSI/Installer/obj
+build/package/MSI/.vs
+build/package/MSI/Installer/bin
