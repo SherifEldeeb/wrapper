@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<?define ProductVersion = "0.0.2.0"?>
+<?define ProductUpgradeCode = "d839d8c6-a189-4100-b491-8527ae0dd889"?>
+<?define FLEETSERVER = "192.168.0.66:8080" ?>
+<?define KOLIDESECRET = "uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl" ?>
+<?define CompanyName = "SherifEldeeb" ?>
+<?define ProductName = "KolideLauncher" ?>
+<?define IconFile = "icon.ico" ?>
+<?define WRAPPERSVCNAME = "Kolide_Service"?>
+<?define WRAPPERSVCDESC = "Kolide Service Description"?>
+<?define WRAPPERSVCDISPNAME = "Kolide Service Display Name"?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="{F8CCC7B0-1120-429C-B541-A735696E0F2C}" Name="$(var.ProductName)" Language="1033" Version="$(var.ProductVersion)" Manufacturer="$(var.CompanyName)" UpgradeCode="$(var.ProductUpgradeCode)">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+    <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
+    <Icon Id="LauncherIcon" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="LauncherIcon"/>
+    <Property Id="ARPHELPLINK" Value="https://deeb.io"/>
+    <Property Id="ARPURLINFOABOUT" Value="https://deeb.io"/>
+    <Property Id="ARPNOREPAIR" Value="1"/>
+    <Property Id="ARPNOMODIFY" Value="1"/>
+
+    <!--<UIRef Id="WixUI_Mondo"/>
+    <UIRef Id="WixUI_ErrorProgressText" />-->
+
+    <UI Id="MyWixUI_Mondo">
+      <UIRef Id="WixUI_Mondo" />
+      <UIRef Id="WixUI_ErrorProgressText" />
+      <!--<DialogRef Id="UserRegistrationDlg" />-->
+      <!--<Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="UserRegistrationDlg" Order="3">LicenseAccepted = "1"</Publish>-->
+      <!--<Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="UserRegistrationDlg">1</Publish>-->
+    </UI>
+    <!--<Property Id="PIDTemplate"><![CDATA[12345<### ###>@@@@@]]></Property>-->
+
+    <!--<InstallExecuteSequence>
+      <LaunchConditions After='AppSearch' />
+      <RemoveExistingProducts After='InstallFinalize' />
+      <Custom Action='LaunchFile' After='InstallFinalize'>NOT Installed</Custom>
+    </InstallExecuteSequence>
+    <Property Id='NOTEPAD'>Notepad.exe</Property>
+    <CustomAction Id='LaunchFile' Property='NOTEPAD' ExeCommand='[SourceDir]Readme.txt' Return='asyncNoWait' />
+    <CustomAction Id='AbortError' Error='Cannot solve this riddle. Giving up.' />
+    <CustomAction Id='PropertyAssign' Property='PathProperty' Value='[INSTALLDIR][NOTEPAD].exe' />
+    <CustomAction Id='PropertyAssign2' Directory='INSTALLDIR' Value='[TARGETDIR]\Program Files\Acme\Foobar 1.0\bin' />-->
+
+    <Condition Message="You need to be an administrator to install this product.">Privileged</Condition>
+
+    <!--<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />-->
+
+    <WixVariable Id="WixUILicenseRtf" Value="extra\License.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="extra\Banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="extra\Dialog.bmp" />
+
+    <Upgrade Id="$(var.ProductUpgradeCode)">
+      <UpgradeVersion Minimum="$(var.ProductVersion)" OnlyDetect="yes" Property="NEWERVERSIONDETECTED"/>
+      <UpgradeVersion Minimum="0.0.0" Maximum="$(var.ProductVersion)" IncludeMinimum="yes" IncludeMaximum="no"
+                      Property="OLDERVERSIONBEINGUPGRADED"/>
+    </Upgrade>
+
+    <Condition Message="A newer version of this software is already installed.">NOT NEWERVERSIONDETECTED</Condition>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="$(var.CompanyName)">
+          <Directory Id="INSTALLDIR" Name="$(var.ProductName)" />
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ProgramMenuSubfolder" Name="$(var.ProductName)">
+          <Component Id="ApplicationShortcuts" Guid="{D4154B31-3894-4634-8F92-6431BA6A5376}">
+            <Shortcut Id="LauncherShortcut" Name="Butt-Kicking shortcut" Icon="LauncherIcon" IconIndex="0"  Description="Launcher shortcut" Target="[INSTALLDIR]wrapper.exe" WorkingDirectory="INSTALLDIR"/>
+            <RegistryValue Root="HKCU" Key="Software\$(var.CompanyName)\$(var.ProductName)" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            <RemoveFolder Id="ProgramMenuSubfolder" On="uninstall"/>
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallValidate"/>
+    </InstallExecuteSequence>
+
+    <Feature Id="FullSetup" Level="1" ConfigurableDirectory="INSTALLDIR"
+             Description="Full Setup Desc" Display="expand" Title="Full Setup Title">
+      <Feature Id="FeatureShortcut" Level="1" Description="ShortCut Description" Title="Shortcuts Title">
+        <ComponentRef Id="ApplicationShortcuts"/>
+      </Feature>
+      <Feature Id="FeatureInstallerFiles" Level="1" Description="FeatureInstallerFiles Description" Title="Installer Files Title">
+        <ComponentRef Id="FolderPermComponent"/>
+        <ComponentGroupRef Id="InstallerFiles"/>
+      </Feature>
+    </Feature>
+  </Product>
+
+  <Fragment Id="FolderPermissions">
+    <Component Id="FolderPermComponent" Guid="{76E324A7-46C1-4811-B8B4-913D31C24D5D}" Directory="INSTALLDIR" Win64="yes">
+      <CreateFolder>
+        <PermissionEx Sddl="O:SYG:SYD:PAI(A;OICIIO;GA;;;CO)(A;OICIIO;GA;;;SY)(A;;FA;;;SY)(A;;FA;;;BA)(A;OICIIO;GA;;;BA)" />
+      </CreateFolder>
+    </Component>
+  </Fragment>
+
+  <Fragment Id="CoreComponents">
+    <ComponentGroup Id="InstallerFiles">
+      <Component Id="launcher" Guid="{998060F0-6EAE-4DB8-B8A9-34547F08FCD9}" Win64="yes" Directory="INSTALLDIR">
+        <File Source="launcher.exe" KeyPath="yes" ReadOnly="yes"></File>
+      </Component>
+      <Component Id="osqueryd" Guid="{D52AF350-FFA5-4B7C-8213-9E92308DF5FE}" Win64="yes" Directory="INSTALLDIR">
+        <File Source="osqueryd.exe" KeyPath="yes" ReadOnly="yes" ></File>
+      </Component>
+      <Component Id="osqueryextension" Guid="{6B498342-156E-4888-B25F-94BD71C0D724}" Win64="yes" Directory="INSTALLDIR">
+        <File Source="osquery-extension.exe" KeyPath="yes" ReadOnly="yes"></File>
+      </Component>
+      <Component Id="wrapper" Guid="{D1B54603-0021-4077-BC51-9CC53EA8B26B}" Win64="yes" Directory="INSTALLDIR">
+        <File Source="wrapper.exe" KeyPath="yes" ReadOnly="yes" Id="WRAPPERFILENAME"></File>
+        <ServiceInstall Id="WrapperSvcInstall" Arguments="$(var.WRAPPERSVCNAME) run launcher.exe --hostname=$(var.FLEETSERVER) --enroll_secret=$(var.KOLIDESECRET) --insecure"
+                  Description="$(var.WRAPPERSVCDESC)" DisplayName="$(var.WRAPPERSVCDISPNAME)" Interactive="no" Name="$(var.WRAPPERSVCNAME)" Start="auto"
+                   Type="ownProcess" ErrorControl="ignore">
+          <wix:ServiceConfig xmlns:wix="http://schemas.microsoft.com/wix/UtilExtension" FirstFailureActionType="none" SecondFailureActionType="none" ThirdFailureActionType="none"/>
+        </ServiceInstall>
+        <ServiceControl Id="WrapperSvcControl" Name="$(var.WRAPPERSVCNAME)" Remove="uninstall" Start="install" Stop="uninstall" Wait="yes"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+</Wix>
