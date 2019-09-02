@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <?define ProductVersion = "0.0.1.0"?>
 <?define ProductUpgradeCode = "d839d8c6-a189-4100-b491-8527ae0dd889"?>
-<?define KOLIDESECRET = "uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl" ?>
 <?define CompanyName = "SherifEldeeb" ?>
 <?define ProductName = "KolideLauncher" ?>
 <?define IconFile = "icon.ico" ?>
@@ -19,8 +18,9 @@
     <Property Id="ARPURLINFOABOUT" Value="https://deeb.io"/>
     <Property Id="ARPNOREPAIR" Value="1"/>
     <Property Id="ARPNOMODIFY" Value="1"/>
-    <Property Id="FLEETHOSTNAME" Value="127.0.0.1:8080" Admin="yes">
-    </Property>
+    <Property Id="FLEETHOSTNAME" Value="127.0.0.1:8080" Admin="yes"/>
+    <Property Id="ENROLLSECRET" Value="uI0DoZR/5NyPCTXjt/+/CiGgpvAHOckl" Admin="yes"/>
+
     <InstallExecuteSequence>
       <RemoveExistingProducts After="InstallValidate"/>
     </InstallExecuteSequence>
@@ -30,6 +30,9 @@
     <UI Id="MyWixUI_Mondo">
       <UIRef Id="WixUI_Mondo" />
       <UIRef Id="WixUI_ErrorProgressText" />
+      <DialogRef Id="GetFleetHostDlg" />
+      <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="GetFleetHostDlg" Order="3">LicenseAccepted = "1"</Publish>
+      <Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="GetFleetHostDlg">1</Publish>
       <!--<DialogRef Id="UserRegistrationDlg" />-->
       <!--<Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="UserRegistrationDlg" Order="3">LicenseAccepted = "1"</Publish>-->
       <!--<Publish Dialog="SetupTypeDlg" Control="Back" Event="NewDialog" Value="UserRegistrationDlg">1</Publish>-->
@@ -113,7 +116,7 @@
       </Component>
       <Component Id="wrapper" Guid="{D1B54603-0021-4077-BC51-9CC53EA8B26B}" Win64="yes" Directory="INSTALLDIR">
         <File Source="wrapper.exe" KeyPath="yes" ReadOnly="yes" Id="WRAPPERFILENAME"></File>
-        <ServiceInstall Id="WrapperSvcInstall" Arguments="$(var.WRAPPERSVCNAME) run launcher.exe --hostname=[FLEETHOSTNAME] --enroll_secret=$(var.KOLIDESECRET) --insecure"
+        <ServiceInstall Id="WrapperSvcInstall" Arguments="$(var.WRAPPERSVCNAME) run launcher.exe --hostname=[FLEETHOSTNAME] --enroll_secret=[ENROLLSECRET] --insecure"
                   Description="$(var.WRAPPERSVCDESC)" DisplayName="$(var.WRAPPERSVCDISPNAME)" Interactive="no" Name="$(var.WRAPPERSVCNAME)" Start="auto"
                    Type="ownProcess" ErrorControl="ignore">
           <wix:ServiceConfig xmlns:wix="http://schemas.microsoft.com/wix/UtilExtension" FirstFailureActionType="none" SecondFailureActionType="none" ThirdFailureActionType="none"/>
@@ -123,4 +126,32 @@
     </ComponentGroup>
   </Fragment>
 
+  <Fragment>
+    <UI>
+      <Dialog Id="GetFleetHostDlg" Width="370" Height="270" Title="[ProdctName] Setup" NoMinimize="no">
+        <Control Id="FleetHostTxtControl" Type="Text" X="45" Y="73" Width="220" Height="15" TabSkip="no" Text="Kolide Fleet Hostname or IP Address:" />
+        <Control Id="FleetHostEditControl" Type="Edit" X="45" Y="85" Width="220" Height="18" Property="FLEETHOSTNAME" Text="{80}" />
+        <Control Id="FleetEnrollSecretTxtControl" Type="Text" X="45" Y="120" Width="220" Height="15" TabSkip="no" Text="Enroll Secret:" />
+        <Control Id="FleetEnrollSecretEditControl" Type="Edit" X="45" Y="132" Width="220" Height="18" Property="ENROLLSECRET" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="SetupTypeDlg">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please enter Kolide Fleet Server information</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Kolide Fleet Hostname</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
 </Wix>
